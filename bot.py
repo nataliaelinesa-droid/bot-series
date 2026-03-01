@@ -1,71 +1,38 @@
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-import os
-import requests
-
-TOKEN = os.getenv("TOKEN")
-TMDB_KEY = os.getenv("TMDB_KEY")
-
-# 🎬 IDs oficiais corretos do TMDB para TV
-GENRES = {
-    "Ação": 10759,        # Action & Adventure
-    "Comédia": 35,
-    "Terror": 9648,       # Mystery (terror real para TV quase não existe separado)
-    "Romance": 10749
-}
-
 def buscar_series_por_genero(genre_id):
     url = f"https://api.themoviedb.org/3/discover/tv?api_key={TMDB_KEY}&with_genres={genre_id}&language=pt-BR&sort_by=popularity.desc"
+    
+    response = requests.get(url)
 
-    try:
-        response = requests.get(url)
-        
-        if response.status_code != 200:
-            return "Erro ao conectar com a API 😢"
+    if response.status_code != 200:
+        return "Erro ao conectar com a API 😢"
 
-        data = response.json()
-        series = data.get("results", [])
+    data = response.json()
+    series = data.get("results", [])[:3]
 
-        if not series:
-            return "Não encontrei séries 😢"
+    if not series:
+        return "Não encontrei séries 😢"
 
-        resultado = ""
-        for s in series[:3]:
-            nome = s.get("name", "Sem nome")
-            resultado += f"📺 {nome}\n"
+    resultado = ""
 
-        return resultado
+    for s in series:
+        serie_id = s["id"]
+        nome = s["name"]
 
-    except Exception as e:
-        return "Erro inesperado 😢"
+        # 🔥 Segunda requisição para pegar episódios
+        detalhes_url = f"https://api.themoviedb.org/3/tv/{serie_id}?api_key={TMDB_KEY}&language=pt-BR"
+        detalhes_resp = requests.get(detalhes_url)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    teclado = [
-        ["Ação", "Romance"],
-        ["Comédia", "Terror"]
-    ]
+        if detalhes_resp.status_code == 200:
+            detalhes = detalhes_resp.json()
+            temporadas = detalhes.get("number_of_seasons", "?")
+            episodios = detalhes.get("number_of_episodes", "?")
 
-    reply_markup = ReplyKeyboardMarkup(teclado, resize_keyboard=True)
+            resultado += (
+                f"📺 {nome}\n"
+                f"📀 {temporadas} temporadas\n"
+                f"🎬 {episodios} episódios\n\n"
+            )
+        else:
+            resultado += f"📺 {nome}\n\n"
 
-    await update.message.reply_text(
-        "Oi! 🎬 Eu sou seu bot de séries.\nEscolha um gênero:",
-        reply_markup=reply_markup
-    )
-
-async def responder_genero(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    genero = update.message.text
-
-    if genero in GENRES:
-        recomendacoes = buscar_series_por_genero(GENRES[genero])
-        await update.message.reply_text(
-            f"🎬 Recomendações de {genero}:\n\n{recomendacoes}"
-        )
-    else:
-        await update.message.reply_text("Escolha um gênero usando os botões 😉")
-
-app = ApplicationBuilder().token(TOKEN).build()
-
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_genero))
-
-app.run_polling()
+    return resultado
