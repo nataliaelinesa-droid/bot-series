@@ -1,3 +1,4 @@
+print("TMDB_KEY:", TMDB_KEY)
 import os
 import requests
 from telegram import Update, ReplyKeyboardMarkup
@@ -92,3 +93,4 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_genero))
 
 app.run_polling()
+
