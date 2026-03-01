@@ -6,33 +6,44 @@ import requests
 TOKEN = os.getenv("TOKEN")
 TMDB_KEY = os.getenv("TMDB_KEY")
 
-# 🎬 IDs de gênero do TMDB
+# 🎬 IDs oficiais corretos do TMDB para TV
 GENRES = {
-    "Ação": 10759,
+    "Ação": 10759,        # Action & Adventure
     "Comédia": 35,
-    "Terror": 9648,
+    "Terror": 9648,       # Mystery (terror real para TV quase não existe separado)
     "Romance": 10749
 }
 
 def buscar_series_por_genero(genre_id):
     url = f"https://api.themoviedb.org/3/discover/tv?api_key={TMDB_KEY}&with_genres={genre_id}&language=pt-BR&sort_by=popularity.desc"
-    response = requests.get(url)
-    data = response.json()
 
-    series = data.get("results", [])[:3]
+    try:
+        response = requests.get(url)
+        
+        if response.status_code != 200:
+            return "Erro ao conectar com a API 😢"
 
-    if not series:
-        return "Não encontrei séries 😢"
+        data = response.json()
+        series = data.get("results", [])
 
-    resultado = ""
-    for s in series:
-        resultado += f"📺 {s['name']}\n"
+        if not series:
+            return "Não encontrei séries 😢"
 
-    return resultado
+        resultado = ""
+        for s in series[:3]:
+            nome = s.get("name", "Sem nome")
+            resultado += f"📺 {nome}\n"
+
+        return resultado
+
+    except Exception as e:
+        return "Erro inesperado 😢"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    teclado = [["Ação", "Romance"],
-               ["Comédia", "Terror"]]
+    teclado = [
+        ["Ação", "Romance"],
+        ["Comédia", "Terror"]
+    ]
 
     reply_markup = ReplyKeyboardMarkup(teclado, resize_keyboard=True)
 
