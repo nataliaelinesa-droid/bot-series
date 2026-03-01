@@ -1,4 +1,3 @@
-print("TMDB_KEY:", TMDB_KEY)
 import os
 import requests
 from telegram import Update, ReplyKeyboardMarkup
@@ -6,6 +5,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 
 TOKEN = os.getenv("TOKEN")
 TMDB_KEY = os.getenv("TMDB_API_KEY")
+
+print("TMDB_KEY:", TMDB_KEY)
 
 GENRES = {
     "Ação": 10759,
@@ -93,4 +94,5 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_genero))
 
 app.run_polling()
+
 
